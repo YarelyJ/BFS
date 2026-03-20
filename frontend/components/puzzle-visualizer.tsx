@@ -1,5 +1,7 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
+// Cambiamos @/ por ./ para ir directo a la carpeta local
 import { Button } from "./ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
