@@ -24,6 +24,22 @@ const CITIES = [
 
 type City = (typeof CITIES)[number]
 
+// Coordenadas aproximadas de las ciudades en el mapa (porcentaje x, y)
+const CITY_POSITIONS: Record<City, { x: number; y: number }> = {
+  "Ciudad de Mexico": { x: 52, y: 62 },
+  "Guadalajara": { x: 38, y: 55 },
+  "Monterrey": { x: 55, y: 32 },
+  "Cancun": { x: 88, y: 55 },
+  "Tijuana": { x: 8, y: 12 },
+  "Puebla": { x: 56, y: 65 },
+  "Merida": { x: 82, y: 52 },
+  "Leon": { x: 42, y: 50 },
+  "Chihuahua": { x: 32, y: 22 },
+  "Queretaro": { x: 48, y: 52 },
+  "Oaxaca": { x: 56, y: 75 },
+  "Veracruz": { x: 62, y: 62 },
+}
+
 // Grafo de conexiones de vuelo (bidireccional)
 const FLIGHT_CONNECTIONS: Record<City, City[]> = {
   "Ciudad de Mexico": ["Guadalajara", "Monterrey", "Cancun", "Tijuana", "Puebla", "Merida", "Oaxaca", "Veracruz"],
@@ -430,6 +446,177 @@ export function FlightRouteVisualizer() {
                     {data.exito ? "Ruta Encontrada" : "Sin Ruta"}
                   </Badge>
                   <div className="text-sm text-muted-foreground mt-1">Resultado</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Mapa Visual de Mexico */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Mapa de Ruta</CardTitle>
+              <CardDescription>Visualizacion geografica del recorrido de vuelo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="relative w-full aspect-[16/10] bg-gradient-to-b from-sky-100 to-sky-50 dark:from-sky-950 dark:to-sky-900 rounded-xl border overflow-hidden">
+                {/* Fondo del mapa con forma aproximada de Mexico */}
+                <svg
+                  viewBox="0 0 100 100"
+                  className="absolute inset-0 w-full h-full"
+                  preserveAspectRatio="xMidYMid slice"
+                >
+                  {/* Conexiones de vuelo como lineas */}
+                  {CITIES.map((city) =>
+                    FLIGHT_CONNECTIONS[city].map((connectedCity) => {
+                      const from = CITY_POSITIONS[city]
+                      const to = CITY_POSITIONS[connectedCity]
+                      const isInRoute =
+                        data.ruta.includes(city) &&
+                        data.ruta.includes(connectedCity) &&
+                        Math.abs(data.ruta.indexOf(city) - data.ruta.indexOf(connectedCity)) === 1
+                      const isCurrentSegment =
+                        isInRoute &&
+                        ((data.ruta[currentStep] === city && data.ruta[currentStep - 1] === connectedCity) ||
+                          (data.ruta[currentStep] === connectedCity && data.ruta[currentStep - 1] === city))
+
+                      return (
+                        <line
+                          key={`${city}-${connectedCity}`}
+                          x1={from.x}
+                          y1={from.y}
+                          x2={to.x}
+                          y2={to.y}
+                          className={`transition-all duration-500 ${
+                            isCurrentSegment
+                              ? "stroke-primary stroke-[0.8]"
+                              : isInRoute
+                                ? "stroke-chart-2 stroke-[0.5]"
+                                : "stroke-muted-foreground/20 stroke-[0.15]"
+                          }`}
+                          strokeDasharray={isInRoute ? "none" : "1,1"}
+                        />
+                      )
+                    })
+                  )}
+
+                  {/* Ciudades como puntos */}
+                  {CITIES.map((city) => {
+                    const pos = CITY_POSITIONS[city]
+                    const isInRoute = data.ruta.includes(city)
+                    const isCurrent = data.ruta[currentStep] === city
+                    const isOrigin = city === origin
+                    const isDestination = city === destination
+                    const routeIndex = data.ruta.indexOf(city)
+                    const isVisited = routeIndex !== -1 && routeIndex <= currentStep
+
+                    return (
+                      <g key={city}>
+                        {/* Circulo de fondo para ciudades importantes */}
+                        {(isOrigin || isDestination || isCurrent) && (
+                          <circle
+                            cx={pos.x}
+                            cy={pos.y}
+                            r={isCurrent ? 4 : 3}
+                            className={`transition-all duration-300 ${
+                              isCurrent
+                                ? "fill-primary/30 animate-pulse"
+                                : isOrigin
+                                  ? "fill-chart-2/30"
+                                  : "fill-chart-1/30"
+                            }`}
+                          />
+                        )}
+                        {/* Punto de la ciudad */}
+                        <circle
+                          cx={pos.x}
+                          cy={pos.y}
+                          r={isCurrent ? 2.5 : isInRoute ? 2 : 1.5}
+                          className={`transition-all duration-300 ${
+                            isCurrent
+                              ? "fill-primary"
+                              : isVisited
+                                ? "fill-chart-2"
+                                : isInRoute
+                                  ? "fill-chart-3"
+                                  : "fill-muted-foreground/50"
+                          }`}
+                        />
+                      </g>
+                    )
+                  })}
+
+                  {/* Avion animado en la ruta actual */}
+                  {currentStep > 0 && (
+                    <g
+                      className="transition-all duration-500"
+                      transform={`translate(${CITY_POSITIONS[data.ruta[currentStep]].x}, ${CITY_POSITIONS[data.ruta[currentStep]].y})`}
+                    >
+                      <circle r="3" className="fill-primary/20" />
+                      <text
+                        x="0"
+                        y="0.5"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="text-[3px] fill-primary"
+                      >
+                        ✈
+                      </text>
+                    </g>
+                  )}
+                </svg>
+
+                {/* Etiquetas de ciudades */}
+                <div className="absolute inset-0">
+                  {CITIES.map((city) => {
+                    const pos = CITY_POSITIONS[city]
+                    const isInRoute = data.ruta.includes(city)
+                    const isCurrent = data.ruta[currentStep] === city
+                    const isOrigin = city === origin
+                    const isDestination = city === destination
+
+                    return (
+                      <div
+                        key={`label-${city}`}
+                        className="absolute transform -translate-x-1/2 transition-all duration-300"
+                        style={{
+                          left: `${pos.x}%`,
+                          top: `${pos.y + 4}%`,
+                        }}
+                      >
+                        <span
+                          className={`text-[9px] sm:text-[10px] font-medium whitespace-nowrap px-1 py-0.5 rounded ${
+                            isCurrent
+                              ? "bg-primary text-primary-foreground"
+                              : isOrigin
+                                ? "bg-chart-2 text-foreground"
+                                : isDestination
+                                  ? "bg-chart-1 text-foreground"
+                                  : isInRoute
+                                    ? "bg-chart-3/80 text-foreground"
+                                    : "text-muted-foreground"
+                          }`}
+                        >
+                          {city.length > 12 ? city.substring(0, 10) + "..." : city}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Leyenda */}
+                <div className="absolute bottom-2 left-2 flex flex-wrap gap-2 text-[10px]">
+                  <div className="flex items-center gap-1 bg-background/80 px-2 py-1 rounded">
+                    <div className="w-2 h-2 rounded-full bg-chart-2" />
+                    <span>Origen</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-background/80 px-2 py-1 rounded">
+                    <div className="w-2 h-2 rounded-full bg-chart-1" />
+                    <span>Destino</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-background/80 px-2 py-1 rounded">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span>Actual</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
