@@ -1,4 +1,6 @@
 import { PuzzleVisualizer } from "@/components/puzzle-visualizer"
+import Link from "next/link"
+import { Plane } from "lucide-react"
 
 export default function Home() {
   return (
@@ -11,7 +13,13 @@ export default function Home() {
           <p className="mt-3 text-lg text-muted-foreground text-balance">
             Visualizador del algoritmo de Búsqueda en Amplitud para resolver el puzzle lineal
           </p>
-
+          <Link 
+            href="/vuelos" 
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          >
+            <Plane className="size-4" />
+            Ver Rutas de Vuelo BFS
+          </Link>
         </header>
 
         <PuzzleVisualizer />
